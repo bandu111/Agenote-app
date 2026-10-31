@@ -1,0 +1,6 @@
+{
+  "YANSHU_ENV": "cloud",
+  "YANSHU_API_BASE_URL": "https://124.220.169.122/api/v1/",
+  "ASR_PROVIDER": "tencent",
+  "JPUSH_APP_KEY": "b34e401ae30b161e0c21c996"
+}

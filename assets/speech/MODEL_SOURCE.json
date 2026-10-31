@@ -1,0 +1,22 @@
+{
+  "source": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-small-bilingual-zh-en-2023-02-16.tar.bz2",
+  "model": "small bilingual zh-en zipformer transducer int8",
+  "files": {
+    "decoder.int8.onnx": {
+      "bytes": 3486740,
+      "sha256": "4b618d383af304cfae281dbf0a53e8bf442c2f0502256cd5694bd6567ebdd834"
+    },
+    "encoder.int8.onnx": {
+      "bytes": 42980793,
+      "sha256": "db6f51551762e40e549166fe041ea3e45464370b595e9ad23f06478ec3794fbb"
+    },
+    "joiner.int8.onnx": {
+      "bytes": 3228485,
+      "sha256": "bdda356d6f9b8c2d7cee9ee0e26075fa537490f7fd06520be408d287073667b9"
+    },
+    "tokens.txt": {
+      "bytes": 56317,
+      "sha256": "a8e0e4ec53810e433789b54a5c0134a7eaa2ffca595a6334d54c00da858841d3"
+    }
+  }
+}

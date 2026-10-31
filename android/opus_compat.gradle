@@ -1,0 +1,7 @@
+plugins.withId('com.android.library') {
+    androidComponents.finalizeDsl { dsl ->
+        // Flutter's AndroidX dependencies require API 34 or newer.
+        dsl.compileSdk = 36
+        dsl.defaultConfig.minSdk = 24
+    }
+}

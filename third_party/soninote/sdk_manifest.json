@@ -1,0 +1,21 @@
+{
+  "repository": "https://github.com/SonicloudTech/sonicloud_opensdk",
+  "commit": "f10cd9bf2a2341566d923818602ac93fb9246091",
+  "files": [
+    {
+      "path": "android/app/libs/soninote/pnote_20260827161403.aar",
+      "sha256": "1fb794ac2631aa2278eca54ea5c6c3afec8efd7818a679398c4bbc4501f8f49e",
+      "bytes": 193310
+    },
+    {
+      "path": "ios/Runner/SoniNote/libPNote.a",
+      "sha256": "7b969c287ae056988455a26dabe35e97a2a4ffc0f4f8937e056884e80ae5565a",
+      "bytes": 1206824
+    },
+    {
+      "path": "ios/Runner/SoniNote/PNode.h",
+      "sha256": "79fa55c3f7bc0c14648444f3a1a0e6c21b58ca3608be123a9347fa18b158ff8b",
+      "bytes": 3370
+    }
+  ]
+}

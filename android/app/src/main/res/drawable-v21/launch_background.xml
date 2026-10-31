@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+  <item android:drawable="@color/agenote_launch_background" />
+  <item android:width="104dp" android:height="104dp" android:gravity="center">
+    <bitmap android:gravity="fill" android:src="@drawable/agenote_launch" />
+  </item>
+</layer-list>

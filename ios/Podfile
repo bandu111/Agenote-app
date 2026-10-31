@@ -1,0 +1,51 @@
+platform :ios, '13.0'
+
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+project 'Runner', {
+  'Debug' => :debug,
+  'Profile' => :release,
+  'Release' => :release,
+  'Debug-cloud' => :debug,
+  'Profile-cloud' => :release,
+  'Release-cloud' => :release,
+}
+
+def flutter_root
+  settings = File.expand_path('Flutter/Generated.xcconfig', __dir__)
+  raise 'Run flutter pub get before installing pods' unless File.exist?(settings)
+  File.foreach(settings) do |line|
+    match = line.match(/FLUTTER_ROOT\=(.*)/)
+    return match[1].strip if match
+  end
+  raise 'FLUTTER_ROOT is missing from Generated.xcconfig'
+end
+
+require File.expand_path('packages/flutter_tools/bin/podhelper', flutter_root)
+flutter_ios_podfile_setup
+
+target 'Runner' do
+  use_frameworks!
+  # The Flutter helper skips plugins already integrated through SwiftPM.
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+  target 'RunnerTests' do
+    inherit! :search_paths
+  end
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+    # Needed if permission_handler falls back to CocoaPods.
+    if target.name == 'permission_handler_apple'
+      target.build_configurations.each do |config|
+        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
+        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] += [
+          'PERMISSION_MICROPHONE=1', 'PERMISSION_NOTIFICATIONS=1',
+          'PERMISSION_BLUETOOTH=1', 'PERMISSION_EVENTS=1',
+          'PERMISSION_EVENTS_FULL_ACCESS=1', 'PERMISSION_PHOTOS=1', 'PERMISSION_CAMERA=1',
+        ]
+      end
+    end
+  end
+end
