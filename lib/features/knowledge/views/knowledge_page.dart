@@ -304,10 +304,7 @@ class _KnowledgePageState extends State<KnowledgePage>
                               solid: false,
                               dense: true,
                               labels: ['全部'.tr(context), '已归档'.tr(context)],
-                              counts: [
-                                vm.data.documents.length,
-                                vm.archivedCount,
-                              ],
+                              counts: [vm.documentCount, vm.archivedCount],
                               selected: vm.archivedOnly ? 1 : 0,
                               onSelected: (i) => vm.filterArchived(i == 1),
                             ),

@@ -9,8 +9,6 @@ import '../models/progress_models.dart';
 import '../viewmodels/progress_view_model.dart';
 import '../viewmodels/voice_evidence_controller.dart';
 import '../widgets/progress_components.dart';
-import '../widgets/voice_evidence_player.dart';
-import '../widgets/goal_related_sections.dart';
 import 'progress_search.dart';
 import '../../notifications/notification_views.dart';
 
@@ -27,16 +25,12 @@ class _ProgressPageState extends State<ProgressPage>
   final _search = TextEditingController();
   final _searchFocus = FocusNode();
   bool _searchOpen = false;
-  final _viewport = GlobalKey();
-  final _sections = List.generate(2, (_) => GlobalKey());
   int _selected = 0;
-  bool _jumping = false;
   VoiceEvidenceController? _audio;
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _scroll.addListener(_onScroll);
   }
 
   @override
@@ -61,37 +55,11 @@ class _ProgressPageState extends State<ProgressPage>
     }
   }
 
-  void _onScroll() {
-    if (_jumping || !mounted) return;
-    final viewport = _viewport.currentContext?.findRenderObject() as RenderBox?;
-    if (viewport == null) return;
-    final threshold = viewport.localToGlobal(Offset.zero).dy + 24;
-    var current = 0;
-    for (var i = 0; i < _sections.length; i++) {
-      final box = _sections[i].currentContext?.findRenderObject() as RenderBox?;
-      if (box != null && box.localToGlobal(Offset.zero).dy <= threshold) {
-        current = i;
-      }
-    }
-    if (current != _selected) setState(() => _selected = current);
-  }
-
-  Future<void> _jump(int index) async {
-    final target = _sections[index].currentContext;
-    if (target == null) return;
-    setState(() {
-      _selected = index;
-      _jumping = true;
-    });
-    await Scrollable.ensureVisible(
-      target,
-      alignment: 0,
-      duration: MediaQuery.disableAnimationsOf(context)
-          ? Duration.zero
-          : const Duration(milliseconds: 360),
-      curve: Curves.easeOutCubic,
-    );
-    if (mounted) setState(() => _jumping = false);
+  // 主 Tab 只展示自己的内容，避免滚动联动让目标和承诺混在一起。
+  void _jump(int index) {
+    unawaited(_audio?.suspend());
+    setState(() => _selected = index);
+    if (_scroll.hasClients) _scroll.jumpTo(0);
   }
 
   void _open(String path) {
@@ -130,15 +98,7 @@ class _ProgressPageState extends State<ProgressPage>
                           children: [
                             Text(
                               '进展'.tr(context),
-                              style: HomeStyle.text(26, bold: true),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '查看目标推进与双方承诺'.tr(context),
-                              style: HomeStyle.text(
-                                13,
-                                color: HomeStyle.secondary(context),
-                              ),
+                              style: HomeStyle.text(22, bold: true),
                             ),
                           ],
                         ),
@@ -163,7 +123,7 @@ class _ProgressPageState extends State<ProgressPage>
                         },
                         icon: Icon(
                           _searchOpen ? Icons.search_off : Icons.search,
-                          size: 29,
+                          size: 24,
                           color: _searchOpen
                               ? HomeStyle.blue
                               : HomeStyle.secondary(context),
@@ -194,7 +154,7 @@ class _ProgressPageState extends State<ProgressPage>
                     ),
                   ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: ProgressPills(
                     keyPrefix: 'progress-section',
                     labels: ['目标'.tr(context), '双方承诺'.tr(context)],
@@ -219,11 +179,15 @@ class _ProgressPageState extends State<ProgressPage>
                       : RefreshIndicator(
                           onRefresh: model.load,
                           child: SingleChildScrollView(
-                            key: _viewport,
                             controller: _scroll,
                             physics: const AlwaysScrollableScrollPhysics(),
                             child: Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
+                              padding: EdgeInsets.fromLTRB(
+                                16,
+                                _selected == 1 ? 0 : 4,
+                                16,
+                                40,
+                              ),
                               child:
                                   model.loading &&
                                       model.data.goals.isEmpty &&
@@ -249,74 +213,51 @@ class _ProgressPageState extends State<ProgressPage>
                                       children: [
                                         if (model.dataWarning != null)
                                           ProgressEmpty(model.dataWarning!),
-                                        _SectionHeading(
-                                          key: _sections[0],
-                                          icon: Icons.track_changes,
-                                          title: '持续目标'.tr(context),
-                                          subtitle: '重要决定不会随着会话结束而消失。',
-                                          expanded: model.allGoals,
-                                          onAll: model.toggleGoals,
-                                        ),
-                                        if (model.visibleGoals.isEmpty)
-                                          const ProgressEmpty('还没有持续目标')
-                                        else
-                                          ...model.visibleGoals.map(
-                                            (goal) => Padding(
-                                              padding: const EdgeInsets.only(
-                                                bottom: 10,
-                                              ),
-                                              child: _GoalCard(
-                                                goal,
-                                                model: model,
-                                                onOpen: () => _open(
-                                                  '/progress/goals/${goal.id}',
+                                        if (_selected == 0) ...[
+                                          if (model.data.goals.isEmpty)
+                                            const ProgressEmpty('还没有持续目标')
+                                          else
+                                            ...model.data.goals.map(
+                                              (goal) => Padding(
+                                                padding: const EdgeInsets.only(
+                                                  bottom: 10,
+                                                ),
+                                                child: _GoalCard(
+                                                  goal,
+                                                  model: model,
+                                                  onOpen: () => _open(
+                                                    '/progress/goals/${goal.id}',
+                                                  ),
                                                 ),
                                               ),
                                             ),
+                                        ],
+                                        if (_selected == 1) ...[
+                                          _CommitmentSideFilter(
+                                            model: model,
+                                            onSelected: (side) {
+                                              unawaited(_audio?.suspend());
+                                              model.selectSide(side);
+                                            },
                                           ),
-                                        const SizedBox(height: 8),
-                                        _SectionHeading(
-                                          key: _sections[1],
-                                          icon: Icons.handshake_outlined,
-                                          title: '双方承诺'.tr(context),
-                                          subtitle: '基于会议内容生成，保留语音证据并持续跟进履行情况。',
-                                          expanded: model.allCommitments,
-                                          onAll: model.toggleCommitments,
-                                        ),
-                                        ProgressPills(
-                                          labels: CommitmentSide.values
-                                              .map((s) => s.label.tr(context))
-                                              .toList(),
-                                          keyPrefix: 'commitment-side',
-                                          solid: false,
-                                          counts: CommitmentSide.values
-                                              .map(model.followUpCount)
-                                              .toList(),
-                                          selected: model.side.index,
-                                          onSelected: (i) {
-                                            unawaited(_audio?.suspend());
-                                            model.selectSide(
-                                              CommitmentSide.values[i],
-                                            );
-                                          },
-                                        ),
-                                        const SizedBox(height: 10),
-                                        if (model.visibleCommitments.isEmpty)
-                                          const ProgressEmpty('这一方还没有承诺记录')
-                                        else
-                                          ...model.visibleCommitments.map(
-                                            (item) => Padding(
-                                              padding: const EdgeInsets.only(
-                                                bottom: 10,
-                                              ),
-                                              child: _CommitmentCard(
-                                                item,
-                                                onOpen: () => _open(
-                                                  '/progress/commitments/${item.id}',
+                                          const SizedBox(height: 12),
+                                          if (model.selectedCommitments.isEmpty)
+                                            const ProgressEmpty('这一方还没有承诺记录')
+                                          else
+                                            ...model.selectedCommitments.map(
+                                              (item) => Padding(
+                                                padding: const EdgeInsets.only(
+                                                  bottom: 10,
+                                                ),
+                                                child: _CommitmentCard(
+                                                  item,
+                                                  onOpen: () => _open(
+                                                    '/progress/commitments/${item.id}',
+                                                  ),
                                                 ),
                                               ),
                                             ),
-                                          ),
+                                        ],
                                       ],
                                     ),
                             ),
@@ -332,71 +273,60 @@ class _ProgressPageState extends State<ProgressPage>
   }
 }
 
-class _SectionHeading extends StatelessWidget {
-  const _SectionHeading({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onAll,
-    this.expanded = false,
-  });
-  final IconData icon;
-  final String title, subtitle;
-  final VoidCallback onAll;
-  final bool expanded;
+/// 次级筛选采用紧凑分段外观，与上方主导航区分；大字体时允许标签换行。
+class _CommitmentSideFilter extends StatelessWidget {
+  const _CommitmentSideFilter({required this.model, required this.onSelected});
+  final ProgressViewModel model;
+  final ValueChanged<CommitmentSide> onSelected;
+
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: 6, bottom: 10),
-    child: SizedBox(
-      width: double.infinity,
-      child: Stack(
-        clipBehavior: Clip.none,
+  Widget build(BuildContext context) => Align(
+    alignment: Alignment.center,
+    child: Container(
+      constraints: const BoxConstraints(maxWidth: 320),
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: HomeStyle.tint(context),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 40),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 78),
-                  child: Text(title, style: HomeStyle.text(18, bold: true)),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: HomeStyle.text(
-                    12,
-                    color: HomeStyle.secondary(context),
+          for (final side in CommitmentSide.values)
+            Flexible(
+              child: Semantics(
+                selected: model.side == side,
+                button: true,
+                child: Material(
+                  color: model.side == side
+                      ? HomeStyle.surface(context)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  child: InkWell(
+                    key: ValueKey('commitment-side-${side.index}'),
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => onSelected(side),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      child: Text(
+                        '${side.label.tr(context)} ${model.listedCommitments.where((item) => item.side == side).length}',
+                        textAlign: TextAlign.center,
+                        style: HomeStyle.text(
+                          12,
+                          bold: model.side == side,
+                          color: model.side == side
+                              ? HomeStyle.blue
+                              : HomeStyle.secondary(context),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              ],
-            ),
-          ),
-          Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: HomeStyle.tintColor(context, const Color(0xFFEAE8FF)),
-            ),
-            child: Icon(icon, color: const Color(0xFF6A5AF9), size: 22),
-          ),
-          Positioned(
-            right: 0,
-            top: -10,
-            child: TextButton(
-              onPressed: onAll,
-              style: TextButton.styleFrom(
-                minimumSize: const Size(48, 48),
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-              ),
-              child: Text(
-                expanded ? '收起 ‹' : '查看全部 ›',
-                style: HomeStyle.text(12, color: HomeStyle.blue),
               ),
             ),
-          ),
         ],
       ),
     ),
@@ -411,39 +341,64 @@ class _GoalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ProgressCard(
     onTap: onOpen,
+    // 外层已有圆角背景；内层不再裁剪标题和竖条，避免左上角缺失。
+    clipBehavior: Clip.none,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // 为标题留出安全边距，避免圆角裁剪首字；竖条标识每个目标。
+            const SizedBox(width: 4),
+            Container(
+              width: 3,
+              height: 18,
+              margin: const EdgeInsets.only(top: 2, right: 9),
+              decoration: BoxDecoration(
+                color: HomeStyle.blue,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
             Expanded(
               child: InkWell(
                 key: ValueKey('goal-${goal.id}'),
                 onTap: onOpen,
-                child: Text(goal.title,
+                child: Text(
+                  goal.title,
                   softWrap: true,
-                  style: HomeStyle.text(17, bold: true).copyWith(height: 1.5)),
+                  style: HomeStyle.text(15, bold: true).copyWith(height: 1.4),
+                ),
               ),
             ),
             const SizedBox(width: 10),
             ProgressTag(
               goal.statusLabelAt(DateTime.now()) == '已过期'
                   ? '已过期'.tr(context)
-                  : goal.status == GoalStatus.active ? '进度受控' : goal.statusLabelAt(DateTime.now()).tr(context),
-              color: goal.statusLabelAt(DateTime.now()) != '已过期' && goal.status == GoalStatus.active ? HomeStyle.teal : HomeStyle.secondary(context),
+                  : goal.status == GoalStatus.active
+                  ? '进度受控'
+                  : goal.statusLabelAt(DateTime.now()).tr(context),
+              color:
+                  goal.statusLabelAt(DateTime.now()) != '已过期' &&
+                      goal.status == GoalStatus.active
+                  ? HomeStyle.teal
+                  : HomeStyle.secondary(context),
               icon: Icons.circle,
               fontSize: goal.statusLabelAt(DateTime.now()) == '已过期' ? 14 : 12,
             ),
           ],
         ),
-        if (goal.statusLabelAt(DateTime.now()) != '已过期') ...[
-        const SizedBox(height: 5),
-        Align(
-          alignment: Alignment.centerRight,
-          child: Text(goal.deadlineLabel(DateTime.now()).tr(context),
-            style: HomeStyle.text(11, color: HomeStyle.secondary(context))),
-        ),
+        // 待确认且没有交期时，状态标签已经足够，不重复提示缺少交期。
+        if (goal.statusLabelAt(DateTime.now()) != '已过期' &&
+            !(goal.status == GoalStatus.pending && goal.deadline == null)) ...[
+          const SizedBox(height: 5),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              goal.deadlineLabel(DateTime.now()).tr(context),
+              style: HomeStyle.text(11, color: HomeStyle.secondary(context)),
+            ),
+          ),
         ],
         const SizedBox(height: 8),
         Container(
@@ -558,73 +513,74 @@ class _CommitmentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ProgressCard(
     onTap: onOpen,
+    clipBehavior: Clip.none,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 6,
-          crossAxisAlignment: WrapCrossAlignment.center,
+        // 首行只呈现标题；日期和无背景状态统一放到第二行。
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(item.side.itemLabel, style: HomeStyle.text(12)),
-            ProgressTag(
-              '${item.statusAt(DateTime.now()).label.tr(context)}${item.progress > 0 ? ' · ${(item.progress * 100).round()}%' : ''}',
+            const SizedBox(width: 4),
+            Container(
+              width: 3,
+              height: 18,
+              margin: const EdgeInsets.only(top: 2, right: 9),
+              decoration: BoxDecoration(
+                color: HomeStyle.blue,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Expanded(
+              child: InkWell(
+                key: ValueKey('commitment-${item.id}'),
+                onTap: onOpen,
+                child: Text(item.title, style: HomeStyle.text(15, bold: true)),
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 7),
-        InkWell(
-          key: ValueKey('commitment-${item.id}'),
-          onTap: onOpen,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 3),
-            child: Text(item.title, style: HomeStyle.text(16, bold: true)),
-          ),
-        ),
         const SizedBox(height: 4),
-        Text(
-          item.summary,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: HomeStyle.text(13, color: HomeStyle.secondary(context)),
-        ),
-        const SizedBox(height: 8),
-        if (item.evidence.isDocument)
-          DocumentEvidenceReference(evidence: item.evidence)
-        else
-          VoiceEvidencePlayer(evidence: item.evidence, onDetails: onOpen),
-        const SizedBox(height: 8),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final cells = [
-              ProgressField(
-                '承诺交付节点',
-                '${item.deadline.month} 月 ${item.deadline.day} 日',
-                icon: Icons.schedule,
-                compact: MediaQuery.textScalerOf(context).scale(14) <= 20,
+        // 列表只提供原声入口，点击进入当前承诺详情，不在列表直接播放。
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                '${item.deadline.month}月${item.deadline.day}日 ｜ ${item.statusAt(DateTime.now()).label.tr(context)}',
+                style: HomeStyle.text(12, color: HomeStyle.secondary(context)),
               ),
-              ProgressField(
-                '成果物拟定路径',
-                item.attachment ?? '尚未关联附件',
-                icon: Icons.description_outlined,
-                compact: MediaQuery.textScalerOf(context).scale(14) <= 20,
+            ),
+            const SizedBox(width: 8),
+            TextButton(
+              key: ValueKey('commitment-source-${item.id}'),
+              onPressed: onOpen,
+              style: TextButton.styleFrom(
+                foregroundColor: HomeStyle.blue,
+                // 去除默认按钮高度带来的上下空白，保持两行卡片紧凑。
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
               ),
-            ];
-            if (constraints.maxWidth < 280 ||
-                MediaQuery.textScalerOf(context).scale(14) > 20) {
-              return Column(
-                children: [cells[0], const SizedBox(height: 6), cells[1]],
-              );
-            }
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: cells[0]),
-                const SizedBox(width: 6),
-                Expanded(child: cells[1]),
-              ],
-            );
-          },
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    item.evidence.isDocument
+                        ? Icons.description_outlined
+                        : Icons.play_circle_outline,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    item.evidence.isDocument ? '依据' : '原声',
+                    style: HomeStyle.text(13, color: HomeStyle.blue),
+                  ),
+                  const SizedBox(width: 2),
+                  const Icon(Icons.chevron_right, size: 18),
+                ],
+              ),
+            ),
+          ],
         ),
       ],
     ),

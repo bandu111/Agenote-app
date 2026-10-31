@@ -128,11 +128,36 @@ class GoalTopologyNode {
     required this.icon,
     this.milestone,
     this.index,
+    this.stage = MilestoneStage.open,
   });
   final String id, title, body;
   final IconData icon;
   final Milestone? milestone;
   final int? index;
+  final MilestoneStage stage;
+  String get statusLabel => milestoneStatusLabel(milestone!.status, stage);
+}
+
+/// 待完成节点按顺序解锁：第一个未完成的节点是当前阶段，其后的节点待解锁。
+enum MilestoneStage { open, current, locked }
+
+List<MilestoneStage> milestoneStages(List<Milestone> milestones) {
+  final active = milestones.indexWhere(
+    (m) => m.status == MilestoneStatus.active,
+  );
+  final current = active >= 0
+      ? active
+      : milestones.indexWhere((m) => m.status == MilestoneStatus.pending);
+  return [
+    for (var i = 0; i < milestones.length; i++)
+      i == current
+          ? MilestoneStage.current
+          : current >= 0 &&
+                i > current &&
+                milestones[i].status == MilestoneStatus.pending
+          ? MilestoneStage.locked
+          : MilestoneStage.open,
+  ];
 }
 
 class GoalTopologyLayout {
@@ -155,6 +180,7 @@ class GoalTopologyLayout {
     final nodeWidth = 86 * factor;
     final sideWidth = 144 * factor;
     final rootWidth = 214 * factor;
+    final stages = milestoneStages(goal.milestones);
     final nodes = [
       GoalTopologyNode(
         id: 'delivery',
@@ -189,6 +215,7 @@ class GoalTopologyLayout {
           icon: Icons.flag_outlined,
           milestone: goal.milestones[i],
           index: i + 1,
+          stage: stages[i],
         ),
     ];
     double textHeight(
@@ -239,11 +266,7 @@ class GoalTopologyLayout {
       final badgeHeight =
           math.max(
             14.0,
-            textHeight(
-              milestoneStatusLabel(n.milestone!.status).tr(context),
-              11,
-              nodeWidth - 42,
-            ),
+            textHeight(n.statusLabel.tr(context), 11, nodeWidth - 42),
           ) +
           8;
       milestoneHeight = math.max(
@@ -294,10 +317,17 @@ class GoalTopologyLayout {
   }
 }
 
-String milestoneStatusLabel(MilestoneStatus status) => switch (status) {
+String milestoneStatusLabel(
+  MilestoneStatus status, [
+  MilestoneStage stage = MilestoneStage.open,
+]) => switch (status) {
   MilestoneStatus.completed => '已完成',
   MilestoneStatus.active => '进行中',
-  MilestoneStatus.pending => '待完成',
+  MilestoneStatus.pending => switch (stage) {
+    MilestoneStage.current => '当前阶段',
+    MilestoneStage.locked => '待解锁',
+    MilestoneStage.open => '待完成',
+  },
 };
 
 Color milestoneStatusColor(BuildContext context, MilestoneStatus status) =>
@@ -442,8 +472,7 @@ class _GraphNode extends StatelessWidget {
       label: [
         node.title,
         node.body,
-        if (milestone != null)
-          milestoneStatusLabel(milestone.status).tr(context),
+        if (milestone != null) node.statusLabel.tr(context),
       ].where((v) => v.isNotEmpty).join('，'),
       excludeSemantics: true,
       child: Material(
@@ -573,6 +602,10 @@ class _GraphNode extends StatelessWidget {
                                 ? Icons.check_circle
                                 : milestone.status == MilestoneStatus.active
                                 ? Icons.timelapse
+                                : node.stage == MilestoneStage.locked
+                                ? Icons.lock_outline
+                                : node.stage == MilestoneStage.current
+                                ? Icons.play_circle_outline
                                 : Icons.schedule,
                             size: 12,
                             color: accent,
@@ -580,9 +613,7 @@ class _GraphNode extends StatelessWidget {
                           const SizedBox(width: 4),
                           Flexible(
                             child: Text(
-                              milestoneStatusLabel(
-                                milestone.status,
-                              ).tr(context),
+                              node.statusLabel.tr(context),
                               style: TextStyle(
                                 fontSize: 11,
                                 height: 1.4,

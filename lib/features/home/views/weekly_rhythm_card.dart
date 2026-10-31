@@ -70,12 +70,7 @@ class _WeeklyRhythmCardState extends State<WeeklyRhythmCard> {
       children: [
         Row(
           children: [
-            Expanded(
-              child: Text(
-                '本周节奏',
-                style: HomeStyle.text(12, color: HomeStyle.secondary(context)),
-              ),
-            ),
+            Expanded(child: HomeSectionTitle('本周节奏')),
             TextButton(
               key: const ValueKey('weekly-goal-progress'),
               onPressed: () => context.go(
@@ -111,25 +106,32 @@ class _WeeklyRhythmCardState extends State<WeeklyRhythmCard> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${selected == null ? count(data, 'meetings') : count(selected, 'meetings')}',
-                            key: const ValueKey('weekly-meeting-count'),
-                            style: HomeStyle.text(24),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            selected == null
-                                ? '近7天会议已完成转写'
-                                : '${DateTime.tryParse(selected['date'] ?? '')?.month ?? ''}月${DateTime.tryParse(selected['date'] ?? '')?.day ?? ''}日会议已完成转写',
-                            style: HomeStyle.text(
-                              10,
-                              color: HomeStyle.secondary(context),
+                      // 统计值随文显示，避免独占一行挤压图表空间。
+                      child: Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: selected == null
+                                  ? '近7天会议已完成转写 '
+                                  : '${DateTime.tryParse(selected['date'] ?? '')?.month ?? ''}月${DateTime.tryParse(selected['date'] ?? '')?.day ?? ''}日会议已完成转写 ',
                             ),
-                          ),
-                        ],
+                            TextSpan(
+                              text:
+                                  '${selected == null ? count(data, 'meetings') : count(selected, 'meetings')}',
+                              style: HomeStyle.text(
+                                14,
+                                bold: true,
+                                color: HomeStyle.blue,
+                              ),
+                            ),
+                            const TextSpan(text: ' 次'),
+                          ],
+                        ),
+                        key: const ValueKey('weekly-meeting-count'),
+                        style: HomeStyle.text(
+                          10,
+                          color: HomeStyle.secondary(context),
+                        ),
                       ),
                     ),
                     legend('会议', HomeStyle.blue),

@@ -184,4 +184,39 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  test('里程碑按顺序解锁：首个未完成为当前阶段，其后待解锁', () {
+    String labels(List<Milestone> m) {
+      final stages = milestoneStages(m);
+      return [
+        for (var i = 0; i < m.length; i++)
+          milestoneStatusLabel(m[i].status, stages[i]),
+      ].join('|');
+    }
+
+    const a = Milestone('需求范围确认', weight: 1);
+    const b = Milestone('核心模块开发', weight: 1);
+    const c = Milestone('双端联调', weight: 1);
+    expect(labels(const [a, b, c]), '当前阶段|待解锁|待解锁');
+    expect(
+      labels(const [Milestone('需求范围确认', weight: 1, completed: true), b, c]),
+      '已完成|当前阶段|待解锁',
+    );
+    expect(
+      labels(const [
+        Milestone('需求范围确认', weight: 1, completed: true),
+        Milestone('核心模块开发', weight: 1, status: MilestoneStatus.active),
+        c,
+      ]),
+      '已完成|进行中|待解锁',
+    );
+    expect(
+      labels(const [
+        Milestone('需求范围确认', weight: 1, completed: true),
+        Milestone('核心模块开发', weight: 1, completed: true),
+      ]),
+      '已完成|已完成',
+    );
+    expect(milestoneStages(const []), isEmpty);
+  });
 }

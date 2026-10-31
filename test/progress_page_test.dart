@@ -567,18 +567,22 @@ void main() {
     expect(model.side, CommitmentSide.theirs);
     expect(tester.takeException(), isNull);
   });
-  testWidgets('manual scrolling updates selected section', (tester) async {
+  testWidgets('tabs isolate goals and commitments with only two side tabs', (
+    tester,
+  ) async {
     await openProgress(tester);
-    final side = find.byKey(const ValueKey('commitment-side-0'));
-    await tester.ensureVisible(side);
-    await tester.pumpAndSettle();
-    final selected = find
-        .ancestor(
-          of: find.byKey(const ValueKey('progress-section-1')),
-          matching: find.byType(Semantics),
-        )
-        .first;
-    expect(tester.widget<Semantics>(selected).properties.selected, isTrue);
+    expect(find.text('查看目标推进与双方承诺'), findsNothing);
+    expect(find.text('持续目标'), findsNothing);
+    expect(find.byKey(const ValueKey('commitment-side-0')), findsNothing);
+    await jump(tester, 1);
+    expect(find.text('持续目标'), findsNothing);
+    expect(find.byKey(const ValueKey('goal-goal-delivery')), findsNothing);
+    expect(find.byKey(const ValueKey('commitment-side-0')), findsOneWidget);
+    expect(find.byKey(const ValueKey('commitment-side-1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('commitment-side-2')), findsNothing);
+    await jump(tester, 0);
+    expect(find.byKey(const ValueKey('commitment-side-0')), findsNothing);
+    expect(tester.takeException(), isNull);
   });
   testWidgets(
     'commitment detail restores LYZ evidence, goal and source meeting layout',
@@ -598,12 +602,11 @@ void main() {
       expect(find.text('相关会话'), findsNothing);
       expect(find.text('关联目标'), findsNothing);
       expect(find.text('更新进展'), findsNothing);
-      await tapVisible(tester, find.byKey(const ValueKey('play-voice-0')));
-      expect(find.text('示例音频未提供'), findsWidgets);
-      expect(find.byIcon(Icons.pause_circle_filled), findsNothing);
+      expect(find.byKey(const ValueKey('play-voice-0')), findsNothing);
+      expect(find.text('成果物拟定路径'), findsNothing);
       await tapVisible(
         tester,
-        find.byKey(const ValueKey('commitment-commitment-0')),
+        find.byKey(const ValueKey('commitment-source-commitment-0')),
       );
       expect(find.text('承诺详情'), findsOneWidget);
       expect(find.text('承诺信息'), findsOneWidget);
@@ -705,4 +708,45 @@ void main() {
       variant: TargetPlatformVariant({platform}),
     );
   }
+
+  testWidgets('待确认目标在移除下方显示确认按钮，确认后变为进行中并隐藏按钮', (tester) async {
+    final repo = MockProgressRepository();
+    await openProgress(
+      tester,
+      repository: repo,
+      initialLocation: '/progress/goals/goal-desktop',
+    );
+    expect(find.text('待确认'), findsWidgets);
+    final remove = find.byKey(const ValueKey('remove-goal'));
+    final confirm = find.byKey(const ValueKey('confirm-goal'));
+    await tester.ensureVisible(confirm);
+    await tester.pumpAndSettle();
+    expect(find.text('确认这个目标'), findsOneWidget);
+    expect(
+      tester.getTopLeft(confirm).dy,
+      greaterThan(tester.getTopLeft(remove).dy),
+    );
+    expect(tester.getSize(confirm).width, tester.getSize(remove).width);
+    await tester.tap(confirm);
+    await tester.pumpAndSettle();
+    expect(
+      (await repo.load()).goals
+          .firstWhere((g) => g.id == 'goal-desktop')
+          .status,
+      GoalStatus.active,
+    );
+    expect(confirm, findsNothing);
+    expect(remove, findsOneWidget);
+    expect(find.text('目标已确认，进度将随会议陈述推进'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('已进行中的目标不显示确认按钮', (tester) async {
+    await openProgress(
+      tester,
+      initialLocation: '/progress/goals/goal-delivery',
+    );
+    expect(find.byKey(const ValueKey('remove-goal')), findsOneWidget);
+    expect(find.byKey(const ValueKey('confirm-goal')), findsNothing);
+  });
 }

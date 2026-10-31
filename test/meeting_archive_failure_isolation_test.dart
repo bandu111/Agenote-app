@@ -1,9 +1,12 @@
+import 'dart:async';
+import 'package:yanshu/features/meeting/local_speech.dart';
+import 'meeting_test.dart' show FakeMeetingRecorder;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yanshu/core/network/api_config.dart';
 import 'package:yanshu/features/meeting/meeting_models.dart';
 import 'package:yanshu/features/meeting/meeting_store.dart';
 import 'meeting_remote_test.dart' show BusinessMeetingRemote;
-import 'meeting_remote_test.dart' show FakeMeetingRemote, createMeeting;
+import 'meeting_remote_test.dart' show FakeMeetingRemote, FakeTranscriptPolisher, createMeeting;
 
 class InvalidAnalysisRemote extends FakeMeetingRemote {
   @override
@@ -20,6 +23,51 @@ class InvalidAnalysisRemote extends FakeMeetingRemote {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test('five-minute meeting archives while display polishing is still blocked', () async {
+    final gate = Completer<String>();
+    final remote = FakeTranscriptPolisher()..gate = gate;
+    final vm = await createMeeting(remote,MemoryMeetingStore());
+    await vm.start(demo:false);
+    (vm.recorder as FakeMeetingRecorder).transcriptEvents.add(
+      const MeetingTranscript(0,'我负责明天提交测试报告。',isFinal:true));
+    final utteranceId = vm.record!.utterances.single.id;
+    await vm.correct(utteranceId,'我负责后天提交测试报告。');
+    vm.phase = MeetingPhase.ended;
+    vm.record = vm.record!.copy(ended:true,elapsed:const Duration(minutes:5));
+    try {
+      await vm.syncCloud().timeout(const Duration(seconds:2));
+      expect(gate.isCompleted,isFalse);
+      expect(vm.record!.cloudMinutes,contains('云端纪要'));
+      expect(remote.sent.last.utterances.single.raw,'我负责明天提交测试报告。');
+      expect(remote.sent.last.utterances.single.correction,'我负责后天提交测试报告。');
+      expect(remote.sent.last.elapsed,const Duration(minutes:5));
+      expect(vm.cloudError,isNull);
+    } finally {
+      gate.complete('不得覆盖人工修改');
+      await Future<void>.delayed(Duration.zero);
+    }
+  });
+  test('final archive does not wait for a blocked realtime business review', () async {
+    final remote = BusinessMeetingRemote();
+    final store = MemoryMeetingStore();
+    await store.save(MeetingRecord(id:'business-delay',startedAt:DateTime(2030),
+      demo:false,ownerId:'account-a',elapsed:const Duration(seconds:90),
+      utterances:[const MeetingUtterance(id:'u1',speaker:'A',raw:'明天提交接口报告。',at:Duration.zero)]));
+    final vm = await createMeeting(remote,store);
+    await vm.open('business-delay');
+    vm.phase = MeetingPhase.ended;
+    vm.record = vm.record!.copy(ended:true);
+    try {
+      await vm.syncCloud().timeout(const Duration(seconds:2));
+      expect(remote.firstBusiness.isCompleted,isTrue);
+      expect(remote.release.isCompleted,isFalse);
+      expect(vm.record!.cloudMinutes,contains('云端纪要'));
+      expect(vm.cloudError,isNull);
+    } finally {
+      remote.release.complete();
+      await Future<void>.delayed(Duration.zero);
+    }
+  });
   test(
     'end flag and final duration sync even when phase and utterances stay unchanged',
     () async {

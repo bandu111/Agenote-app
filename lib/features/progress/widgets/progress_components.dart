@@ -7,10 +7,12 @@ class ProgressCard extends StatelessWidget {
     super.key,
     required this.child,
     this.padding = 12,
+    this.clipBehavior = Clip.antiAlias,
     this.onTap,
   });
   final Widget child;
   final double padding;
+  final Clip clipBehavior;
   final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) => Container(
@@ -20,7 +22,7 @@ class ProgressCard extends StatelessWidget {
     child: Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(16),
-      clipBehavior: Clip.antiAlias,
+      clipBehavior: clipBehavior,
       child: InkWell(onTap: onTap, child: child),
     ),
   );

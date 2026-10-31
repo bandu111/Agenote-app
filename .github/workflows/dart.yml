@@ -3,6 +3,11 @@ name: YanShu iOS IPA Build
 on:
   workflow_dispatch:
     inputs:
+      build_number:
+        description: 'Unique build number; must exceed prior uploads for the same App Store app'
+        type: string
+        default: ''
+        required: false
       upload_testflight:
         description: 'Upload the signed build to App Store Connect / TestFlight'
         type: boolean
@@ -119,11 +124,14 @@ jobs:
         run: flutter analyze --no-pub
 
       - name: Build signed cloud IPA
+        env:
+          IOS_BUILD_NUMBER: ${{ inputs.build_number || github.run_number }}
         run: |
           set -euo pipefail
+          [[ "$IOS_BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]] || { echo 'build_number must be a positive integer'; exit 1; }
           flutter build ipa --release --flavor cloud --target lib/main.dart \
             --dart-define-from-file=config/cloud.json \
-            --build-number="${{ github.run_number }}" \
+            --build-number="$IOS_BUILD_NUMBER" \
             --export-options-plist="$RUNNER_TEMP/ExportOptions.plist"
 
       - name: Collect IPA

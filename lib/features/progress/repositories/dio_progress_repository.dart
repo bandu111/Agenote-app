@@ -10,7 +10,8 @@ class DioProgressRepository
     implements
         AccountProgressRepository,
         ProgressCompletionRepository,
-        GoalRemovalRepository {
+        GoalRemovalRepository,
+        GoalConfirmationRepository {
   DioProgressRepository(this.client, {this.meetingStore});
   final ApiClient client;
   final MeetingStore? meetingStore;
@@ -291,6 +292,14 @@ class DioProgressRepository
     id,
     'goals/${Uri.encodeComponent(id)}/remove',
     {'note': '用户在目标详情移除目标，保留原始记录'},
+    entityKind: 'goals',
+  );
+
+  @override
+  Future<void> confirmGoal(String id) => _write(
+    id,
+    'goals/${Uri.encodeComponent(id)}/confirm',
+    {'note': '用户在目标详情确认目标'},
     entityKind: 'goals',
   );
 

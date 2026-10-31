@@ -246,6 +246,18 @@ class ProgressViewModel extends ChangeNotifier with WidgetsBindingObserver {
     CommitmentStatus status,
     String note,
   ) => _save(() => repository.updateCommitment(id, status, note));
+  bool get supportsGoalConfirmation => repository is GoalConfirmationRepository;
+  Future<bool> confirmGoal(ProgressGoal expected) async {
+    if (!identical(goal(expected.id), expected) || !supportsGoalConfirmation) {
+      actionError = '目标已更新，请刷新后重新确认';
+      _emit();
+      return false;
+    }
+    return _save(
+      () => (repository as GoalConfirmationRepository).confirmGoal(expected.id),
+    );
+  }
+
   bool get supportsGoalRemoval => repository is GoalRemovalRepository;
   Future<bool> removeGoal(ProgressGoal expected) async {
     if (!identical(goal(expected.id), expected) || !supportsGoalRemoval) {

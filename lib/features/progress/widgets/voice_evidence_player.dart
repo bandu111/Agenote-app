@@ -11,11 +11,13 @@ class VoiceEvidencePlayer extends StatefulWidget {
     this.onDetails,
     this.compact = false,
     this.detail = false,
+    this.showIdleLabel = true,
   });
   final VoiceEvidence evidence;
   final VoidCallback? onDetails;
   final bool compact;
   final bool detail;
+  final bool showIdleLabel;
   @override
   State<VoiceEvidencePlayer> createState() => _VoiceEvidencePlayerState();
 }
@@ -243,15 +245,22 @@ class _VoiceEvidencePlayerState extends State<VoiceEvidencePlayer> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  voiceTime(
-                    playing || position != Duration.zero
-                        ? position
-                        : evidence.duration,
-                  ),
-                  style: HomeStyle.text(
-                    11,
-                    color: HomeStyle.secondary(context),
+                // 紧凑行中时长采用固定上限宽度，避免系统大字体挤出播放器。
+                SizedBox(
+                  width: 42,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      voiceTime(
+                        playing || position != Duration.zero
+                            ? position
+                            : evidence.duration,
+                      ),
+                      style: HomeStyle.text(
+                        11,
+                        color: HomeStyle.secondary(context),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -329,16 +338,21 @@ class _VoiceEvidencePlayerState extends State<VoiceEvidencePlayer> {
                     ),
                 ],
               ),
-              Padding(
-                padding: const EdgeInsets.only(left: 12),
-                child: Text(
-                  unavailable ?? (selected ? audio.message ?? '语音证据' : '语音证据'),
-                  style: HomeStyle.text(
-                    11,
-                    color: HomeStyle.secondary(context),
+              // 承诺列表隐藏空闲标签，但保留真实播放状态与不可用原因。
+              if (widget.showIdleLabel ||
+                  unavailable != null ||
+                  (selected && audio.message != null))
+                Padding(
+                  padding: const EdgeInsets.only(left: 12),
+                  child: Text(
+                    unavailable ??
+                        (selected ? audio.message ?? '语音证据' : '语音证据'),
+                    style: HomeStyle.text(
+                      11,
+                      color: HomeStyle.secondary(context),
+                    ),
                   ),
                 ),
-              ),
               if (large)
                 Padding(
                   padding: const EdgeInsets.all(10),

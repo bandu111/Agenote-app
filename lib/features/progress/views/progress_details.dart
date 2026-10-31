@@ -301,7 +301,7 @@ class _ProgressDetailPageState extends State<ProgressDetailPage>
                 const SizedBox(width: 6),
                 Flexible(
                   child: Text(
-                    model.saving ? '正在移除…' : '移除这个目标',
+                    model.saving && !_confirmingGoal ? '正在移除…' : '移除这个目标',
                     style: const TextStyle(fontSize: 13),
                   ),
                 ),
@@ -309,8 +309,62 @@ class _ProgressDetailPageState extends State<ProgressDetailPage>
             ),
           ),
         ),
+        // 会议提取的目标默认待确认；确认后进入进行中，里程碑仍按会议陈述逐个解锁。
+        if (goal.status == GoalStatus.pending &&
+            model.supportsGoalConfirmation) ...[
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              key: const ValueKey('confirm-goal'),
+              onPressed: model.loading || model.saving
+                  ? null
+                  : () => _confirmGoal(model, goal),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: HomeStyle.blue,
+                backgroundColor: HomeStyle.blue.withValues(alpha: .035),
+                side: BorderSide(color: HomeStyle.blue.withValues(alpha: .26)),
+                minimumSize: const Size.fromHeight(44),
+                shape: const StadiumBorder(),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.check_rounded, size: 15),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      model.saving && _confirmingGoal ? '正在确认…' : '确认这个目标',
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ],
     );
+  }
+
+  bool _confirmingGoal = false;
+
+  Future<void> _confirmGoal(ProgressViewModel model, ProgressGoal goal) async {
+    if (model.loading || model.saving) return;
+    final scope = model.accountScopeRevision;
+    setState(() => _confirmingGoal = true);
+    final saved = await model.confirmGoal(goal);
+    if (!mounted) return;
+    setState(() => _confirmingGoal = false);
+    if (scope != model.accountScopeRevision) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          saved ? '目标已确认，进度将随会议陈述推进' : model.actionError ?? '确认未完成，请稍后重试',
+        ),
+      ),
+    );
+    if (saved) unawaited(context.read<HomeViewModel?>()?.refresh());
   }
 
   Future<void> _removeGoal(ProgressViewModel model, ProgressGoal goal) async {

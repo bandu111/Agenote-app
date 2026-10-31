@@ -134,6 +134,45 @@ void main() {
     vm.dispose();
   });
 
+  testWidgets('A以破折号或省略号断句后B接话，A标为被打断并显示待补全', (tester) async {
+    for (final cut in ['上线前必须先——', '上线前必须先...', '上线前必须先—。']) {
+      final recorder = FakeMeetingRecorder();
+      final vm = await createMeeting(
+        FakeMeetingRemote(),
+        MemoryMeetingStore(),
+        recorder: recorder,
+        disposeViewModel: false,
+      );
+      await vm.start(demo: false);
+      recorder.transcriptEvents.add(
+        MeetingTranscript(
+          0,
+          cut,
+          isFinal: true,
+          speakerId: 'scope:0',
+          speakerSeparated: true,
+        ),
+      );
+      recorder.transcriptEvents.add(
+        const MeetingTranscript(
+          1,
+          '客户还没确认。',
+          isFinal: true,
+          speakerId: 'scope:1',
+          speakerSeparated: true,
+        ),
+      );
+      await tester.pump();
+      final a = vm.record!.utterances.first;
+      expect(a.raw, cut, reason: cut);
+      expect(a.turnStatus, 'interrupted', reason: cut);
+      expect(pendingSpeechCompletionIds(vm.record!.utterances), {
+        a.id,
+      }, reason: cut);
+      vm.dispose();
+    }
+  });
+
   test('待补状态从证据恢复；有合法补齐、纠错或撤回时不继续显示', () {
     MeetingUtterance source(
       String id, {

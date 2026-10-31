@@ -127,6 +127,8 @@ class AppStrings {
     '里程碑': 'Milestones',
     '暂无里程碑': 'No milestones yet',
     '待完成': 'Not started',
+    '当前阶段': 'Current stage',
+    '待解锁': 'Locked',
     '进度权重': 'Progress weight',
     '点击节点查看详情 · 双指缩放与拖动': 'Tap for details · Pinch to zoom and drag',
     '是否退出登录？': 'Sign out?',

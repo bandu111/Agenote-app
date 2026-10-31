@@ -322,10 +322,19 @@ class KnowledgeViewModel extends ChangeNotifier {
                 !archivedOnly || document(hit.documentId)?.archived == true,
           )
           .toList();
+
+  /// 会议录音文档仅承载原声与转写引用；已有正式纪要时列表只保留纪要。
+  bool _shadowedAudio(KnowledgeDocument d, List<KnowledgeDocument> all) =>
+      d.kind == KnowledgeKind.audio &&
+      d.source.startsWith('meeting:') &&
+      all.any((o) => o.kind != KnowledgeKind.audio && o.source == d.source);
+
   List<KnowledgeDocument> get visibleDocuments {
     final term = query.trim().toLowerCase();
     final contentIds = searchHits.map((h) => h.documentId).toSet();
-    final result = data.documents.where((d) {
+    final all = data.documents;
+    final result = all.where((d) {
+      if (_shadowedAudio(d, all)) return false;
       if (archivedOnly && !d.archived ||
           projectFilter != null && d.projectId != projectFilter) {
         return false;
@@ -340,7 +349,16 @@ class KnowledgeViewModel extends ChangeNotifier {
     return result;
   }
 
-  int get archivedCount => data.documents.where((d) => d.archived).length;
+  int get documentCount {
+    final all = data.documents;
+    return all.where((d) => !_shadowedAudio(d, all)).length;
+  }
+
+  int get archivedCount {
+    final all = data.documents;
+    return all.where((d) => d.archived && !_shadowedAudio(d, all)).length;
+  }
+
   List<KnowledgeDocument> documentsIn(String folderId) =>
       visibleDocuments.where((d) => d.folderId == folderId).toList();
   List<KnowledgeFolder> children(String? parent) => _data.folders

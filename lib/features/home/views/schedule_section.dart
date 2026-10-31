@@ -44,9 +44,7 @@ class ScheduleSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(
-                child: Text('任务与会议', style: HomeStyle.text(19, bold: true)),
-              ),
+              Expanded(child: HomeSectionTitle('任务与会议')),
               TextButton(
                 key: const ValueKey('timeline-pending-count'),
                 onPressed: model.pendingTaskCount == 0
@@ -54,6 +52,9 @@ class ScheduleSection extends StatelessWidget {
                     : () => _showPendingTasks(context, model, open),
                 style: TextButton.styleFrom(
                   foregroundColor: HomeStyle.secondary(context),
+                  // 收紧按钮默认高度，避免撑大标题行与下方日历的视觉间隔。
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   textStyle: HomeStyle.text(11),
                 ),

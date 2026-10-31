@@ -91,10 +91,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   scrolledUnderElevation: 0,
                   titleSpacing: 0,
                   toolbarHeight:
-                      MediaQuery.textScalerOf(context).scale(11) * 1.45 +
-                      5 +
-                      MediaQuery.textScalerOf(context).scale(23) * 1.25 +
-                      12,
+                      MediaQuery.textScalerOf(context).scale(21) * 1.25 + 12,
                   title: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 600),
@@ -127,9 +124,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _DeviceCard(),
-                            SizedBox(height: 24),
+                            SizedBox(height: 14),
                             WeeklyRhythmCard(),
-                            SizedBox(height: 24),
+                            SizedBox(height: 14),
                             ScheduleSection(),
                             SizedBox(height: 16),
                           ],
@@ -204,7 +201,6 @@ class _StatusHeaderState extends State<_StatusHeader>
     final name = context.select<ProfileViewModel, String>(
       (profile) => profile.data.name.trim(),
     );
-    const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
     final greeting = now.hour >= 6 && now.hour < 12
         ? '上午好'
         : now.hour >= 12 && now.hour < 18
@@ -216,24 +212,15 @@ class _StatusHeaderState extends State<_StatusHeader>
         GestureDetector(
           onLongPress: kDebugMode ? () => _showClockControls(context) : null,
           child: Text(
-            '${now.month} 月 ${now.day} 日 · ${weekdays[now.weekday - 1]}',
-            key: const ValueKey('home-local-date'),
+            name.isEmpty ? greeting : '$greeting，$name',
+            key: const ValueKey('home-greeting'),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: HomeStyle.text(
-              11,
-              color: HomeStyle.secondary(context),
-            ).copyWith(letterSpacing: 1),
-          ),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          name.isEmpty ? greeting : '$greeting，$name',
-          key: const ValueKey('home-greeting'),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: HomeStyle.text(
-            23,
-            bold: true,
-            color: HomeStyle.foreground(context),
+              21,
+              bold: true,
+              color: HomeStyle.foreground(context),
+            ),
           ),
         ),
       ],
@@ -275,16 +262,7 @@ class _DeviceCard extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(
-              child: Text(
-                '设备与硬件',
-                style: HomeStyle.text(
-                  13,
-                  bold: true,
-                  color: HomeStyle.secondary(context),
-                ),
-              ),
-            ),
+            Expanded(child: HomeSectionTitle('设备与硬件')),
             Icon(
               Icons.circle,
               size: 7,

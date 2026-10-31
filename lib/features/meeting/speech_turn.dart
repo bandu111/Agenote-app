@@ -27,8 +27,17 @@ Set<String> pendingSpeechCompletionIds(List<MeetingUtterance> utterances) {
 
 /// ASR 稳定片段不等于完整发言；这里只做保守收尾，不判断业务是否获批。
 bool isUnfinishedSpeech(String text) {
-  final value = text.trim().replaceAll(RegExp(r'[，,。.!！?？;；：:\s]+$'), '');
+  // 破折号、省略号和 [中断] 是显式断点，须在剥离句点前判断，"..." 不能被当作句号吃掉。
+  final trimmed = text.trim().replaceAll(RegExp(r'[，,。!！?？;；：:\s]+$'), '');
+  if (RegExp(r'(—|-{2,}|…|\.{2,}|\[中断\])$').hasMatch(trimmed)) return true;
+  final value = trimmed.replaceAll(RegExp(r'\.+$'), '');
   if (value.runes.length < 3) return true;
+  // 让步、条件和列举的起头词后面必然还有下文。
+  if (RegExp(
+    r'(的话|除了|虽然|尽管|只要|只有|无论|不管|即使|而且|并且|不过|另外|首先|其次)$',
+  ).hasMatch(value)) {
+    return true;
+  }
   for (final pair in [('“', '”'), ('「', '」'), ('（', '）'), ('(', ')')]) {
     if (pair.$1.allMatches(value).length > pair.$2.allMatches(value).length) {
       return true;

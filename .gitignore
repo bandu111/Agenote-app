@@ -56,15 +56,13 @@ app.*.map.json
 *.mobileprovision
 *.p8
 
-# Clean Flutter repository
-**/build/
-.vscode/
+# Local configuration, credentials and development-only material.
 .env
 .env.*
+!.env.example
 *.pem
 *.key
-*.cer
-*.jks
-*.keystore
-android/local.properties
-android/key.properties
+/docs/
+/.vscode/
+/AGENT_HANDOFF.md
+/design-qa.md

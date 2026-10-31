@@ -110,6 +110,21 @@ class ProgressGoal {
   final GoalStatus status;
   final List<Milestone> milestones;
   final List<ProgressChange> history;
+  ProgressGoal withStatus(GoalStatus value) => ProgressGoal(
+    id: id,
+    title: title,
+    code: code,
+    phase: phase,
+    condition: condition,
+    acceptance: acceptance,
+    deadline: deadline,
+    status: value,
+    milestones: milestones,
+    history: history,
+    projectId: projectId,
+    expiredByClear: expiredByClear,
+    knowledgeReferences: knowledgeReferences,
+  );
   String statusLabelAt(DateTime now) =>
       status != GoalStatus.completed &&
           (expiredByClear || deadline != null && !now.isBefore(deadline!))

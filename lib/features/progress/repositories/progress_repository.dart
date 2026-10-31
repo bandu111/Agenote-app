@@ -32,6 +32,11 @@ abstract interface class GoalRemovalRepository {
   Future<void> removeGoal(String id);
 }
 
+/// 用户确认会议提取的目标成立；只去掉待确认，节点进度仍由会议陈述和履约推进。
+abstract interface class GoalConfirmationRepository {
+  Future<void> confirmGoal(String id);
+}
+
 /// 未配置账户后端时保持空状态，不填入演示业务，也不假装写入成功。
 class EmptyProgressRepository implements ProgressRepository {
   @override
@@ -55,7 +60,10 @@ class EmptyProgressRepository implements ProgressRepository {
 
 /// Local, synthetic examples only. No network, real identity, or audio recording.
 class MockProgressRepository
-    implements ProgressRepository, GoalRemovalRepository {
+    implements
+        ProgressRepository,
+        GoalRemovalRepository,
+        GoalConfirmationRepository {
   MockProgressRepository({DateTime? now, ProgressSnapshot? seed})
     : _now = now ?? DateTime.now() {
     _snapshot = seed ?? _examples(_now);
@@ -77,6 +85,23 @@ class MockProgressRepository
   Future<void> removeGoal(String id) async {
     if (!_snapshot.goals.any((g) => g.id == id)) throw StateError('目标不存在');
     _removedGoals.add(id);
+  }
+
+  @override
+  Future<void> confirmGoal(String id) async {
+    final goal = _snapshot.goals.where((g) => g.id == id).firstOrNull;
+    if (goal == null) throw StateError('目标不存在');
+    if (goal.status != GoalStatus.pending) return;
+    _snapshot = ProgressSnapshot(
+      goals: [
+        for (final g in _snapshot.goals)
+          g.id == id ? g.withStatus(GoalStatus.active) : g,
+      ],
+      pending: _snapshot.pending,
+      commitments: _snapshot.commitments,
+      artifacts: _snapshot.artifacts,
+      demo: _snapshot.demo,
+    );
   }
 
   @override

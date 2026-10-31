@@ -391,6 +391,56 @@ void main() {
       expect(fresh.retrieve('30 天'), hasLength(1));
     },
   );
+  test('同一会议已有正式纪要时，列表不再重复显示录音文档', () async {
+    final store = MemoryKnowledgeStore();
+    final vm = await knowledgeModel(store: store);
+    addTearDown(vm.dispose);
+    final before = vm.documentCount;
+    final minutesId = (await vm.archiveMeeting(
+      meetingId: 'm1',
+      title: '项目周会纪要',
+      content: '# 项目周会纪要\n结论',
+      demo: true,
+    ))!;
+    final json = jsonDecode(store.value!) as Map<String, dynamic>;
+    (json['documents'] as List).add({
+      'id': 'audio-server-m1',
+      'folderId': 'meeting-records',
+      'projectId': 'personal-meetings',
+      'kind': 'audio',
+      'source': 'meeting:m1',
+      'createdAt': DateTime.now().toIso8601String(),
+      'versions': [
+        {
+          'id': 'audio-r1',
+          'number': 1,
+          'title': '录音会议',
+          'content': '原始转写',
+          'hash': knowledgeHash('原始转写'),
+          'createdAt': DateTime.now().toIso8601String(),
+          'state': 'current',
+          'origin': 'meeting:m1',
+          'reason': '原始录音及转写',
+          'sources': [],
+        },
+      ],
+      'selectedVersionId': 'audio-r1',
+      'archived': true,
+      'demo': true,
+      'tags': ['原始录音'],
+      'audioRefs': [],
+    });
+    store.value = jsonEncode(json);
+    await vm.load();
+    expect(vm.document('audio-server-m1'), isNotNull);
+    expect(vm.documentsIn('meeting-records').map((d) => d.id), [minutesId]);
+    expect(vm.documentCount, before + 1);
+    vm.filterArchived(true);
+    expect(
+      vm.visibleDocuments.map((d) => d.id),
+      isNot(contains('audio-server-m1')),
+    );
+  });
 }
 
 class KnowledgeFailingStore extends MemoryKnowledgeStore {

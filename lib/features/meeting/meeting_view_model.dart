@@ -2578,7 +2578,8 @@ class MeetingViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> _pushCloud() async {
     _cloudRetryTimer?.cancel();
-    if (record?.ended == true) await waitForPolish();
+    // Minutes are generated from immutable raw speech and explicit corrections.
+    // Display-only polishing continues independently and cannot hold archival.
     if (_disposed || record == null || record!.ownerId != remote?.accountId) {
       return;
     }
@@ -2614,11 +2615,9 @@ class MeetingViewModel extends ChangeNotifier with WidgetsBindingObserver {
       }
       if (!current()) return;
       _queueCloudAudio(source);
-      if (remote is RealtimeMeetingBusiness &&
-          source.ended &&
-          _businessWork != null) {
-        await _businessWork;
-      }
+      // Final minutes depend on the stable transcript, not on completion of
+      // the independent realtime business review. Let that review finish in
+      // the background without holding the archive queue.
       // Final minutes have their own evidence-bound generation job. A failed
       // realtime Agent review must not prevent an ended meeting being archived.
       if (!source.ended &&
@@ -2744,9 +2743,9 @@ class MeetingViewModel extends ChangeNotifier with WidgetsBindingObserver {
           cloudError = '录音已保存，补转写完成后再生成最终纪要';
           return;
         }
-        // 等待会中任务期间可能收到尾句或纠错，归档必须使用最终同步版本。
+        // 核对尾句或纠错，只在证据变化时再同步，不重复递增相同快照版本。
         if (remote is RealtimeMeetingBusiness) {
-          final finalized = await _uploadEvidence(force: true);
+          final finalized = await _uploadEvidence();
           if (!current() || finalized == null || !finalized.ended) return;
           source = finalized;
         }

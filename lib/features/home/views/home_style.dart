@@ -44,3 +44,15 @@ abstract final class HomeStyle {
         fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
       );
 }
+
+/// 三个首页板块共用较小的灰色标题，保持视觉层级一致。
+class HomeSectionTitle extends StatelessWidget {
+  const HomeSectionTitle(this.label, {super.key});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    label,
+    style: HomeStyle.text(16, bold: true, color: HomeStyle.secondary(context)),
+  );
+}

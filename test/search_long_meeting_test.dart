@@ -202,7 +202,22 @@ void main() {
     for (final text in ['交期是', 'Windows 尚未', '合同包括', '他说“周三之前']) {
       expect(isUnfinishedSpeech(text), isTrue);
     }
+    // 破折号、省略号与 [中断] 是显式断点；"..." 不能在剥离句号时被吃掉。
+    for (final text in [
+      '上线前必须先——',
+      '上线前必须先—。',
+      '我们周三...',
+      '我们周三……，',
+      '他说[中断]',
+      '预算的话',
+      '这个方案除了',
+    ]) {
+      expect(isUnfinishedSpeech(text), isTrue, reason: text);
+    }
     expect(isUnfinishedSpeech('尚未批准 Windows，继续原计划。'), isFalse);
+    for (final text in ['上线前必须先完成压测。', '好的，就按原方案。', '版本号是 2.0-beta']) {
+      expect(isUnfinishedSpeech(text), isFalse, reason: text);
+    }
     final gate = SpeechActivityGate();
     for (var i = 0; i < 20; i++) {
       expect(gate.observe(.002), isFalse);

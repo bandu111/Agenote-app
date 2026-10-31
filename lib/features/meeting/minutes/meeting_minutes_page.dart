@@ -1549,7 +1549,7 @@ class _MeetingMinutesPageState extends State<MeetingMinutesPage>
     children: [
       _heading('逐字稿', '${_record!.utterances.length} 段 · 自动转写', false),
       Padding(
-        padding: const EdgeInsets.only(bottom: 20),
+        padding: const EdgeInsets.only(bottom: 14),
         child: Text('发言人标识用于区分声音，未识别真实身份', style: _text(11, color: _muted)),
       ),
       if (_record!.utterances.isEmpty) _empty('暂无逐字稿，原始录音仍会保留'),
@@ -1579,7 +1579,7 @@ class _MeetingMinutesPageState extends State<MeetingMinutesPage>
     final referenced = _relatedSources.contains(u.id);
     return Padding(
       key: _keys.putIfAbsent(u.id, GlobalKey.new),
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 4),
       // 卡片空白和普通正文均可播放；内部术语/按钮的手势优先，长按和滚动不触发点击。
       child: GestureDetector(
         key: ValueKey('minutes-play-source-${u.id}'),
@@ -1598,14 +1598,14 @@ class _MeetingMinutesPageState extends State<MeetingMinutesPage>
             ),
             borderRadius: BorderRadius.circular(14),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
                 width: 48,
                 child: Padding(
-                  padding: const EdgeInsets.only(top: 25),
+                  padding: const EdgeInsets.only(top: 22),
                   child: InkWell(
                     onTap: () => _playUtterance(u),
                     child: ConstrainedBox(
@@ -1719,7 +1719,7 @@ class _MeetingMinutesPageState extends State<MeetingMinutesPage>
                         ],
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     MeetingHighlightedText(
                       key: ValueKey('minutes-annotated-transcript-${u.id}'),
                       // 按 correction > cleaned > raw 展示并重新匹配唯一引用，不改写原文或复用旧偏移。
@@ -1733,7 +1733,7 @@ class _MeetingMinutesPageState extends State<MeetingMinutesPage>
                       paragraphImportant: highlighted,
                       style: _text(14, color: u.withdrawn ? _muted : null)
                           .copyWith(
-                            height: 1.8,
+                            height: 1.65,
                             decoration: u.withdrawn
                                 ? TextDecoration.lineThrough
                                 : null,
