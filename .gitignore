@@ -66,3 +66,4 @@ app.*.map.json
 /.vscode/
 /AGENT_HANDOFF.md
 /design-qa.md
+/.github/

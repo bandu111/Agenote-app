@@ -2,7 +2,7 @@
 
 Agenote 是面向个人的会议与工作跟进助手。它将手机或 AI Voice 录音卡采集的讨论连接到逐字稿、会议纪要、行动项、持续目标、双方承诺和知识库，并通过已绑定的微信 ClawBot 支持会前准备与会后问答。
 
-本仓库为原前端 `jqz_dev` 的工程快照，包含此次确认纳入的本地修复。Dart 包名仍为 `yanshu`，现有应用标识保留为 `com.example.yanshu`，避免影响既有签名与 TestFlight 应用。
+本分支 `LYZ_dev` 为原前端 `jqz_dev` 的干净 Flutter 工程快照，包含此次确认纳入的本地修复，不包含 `.github` 工作流。Dart 包名仍为 `yanshu`，现有应用标识保留为 `com.example.yanshu`，避免影响既有签名与 TestFlight 应用。
 
 配套服务：[Agenote-server](https://github.com/bandu111/Agenote-server)。
 
@@ -79,7 +79,6 @@ assets/                  本地图片、字体、术语词典与语音资源
 android/、ios/            原生桥接、权限与系统录音状态
 test/、integration_test/  单元、Widget 和设备测试
 tool/ci/                 iOS 签名、导出与 Apple 状态核对脚本
-.github/workflows/       IPA 构建及 TestFlight 上传
 ```
 
 ## 检查与测试
@@ -109,32 +108,15 @@ Android APK：
 flutter build apk --release --flavor cloud --target lib/main.dart --dart-define-from-file=config/cloud.json
 ```
 
-iOS 已保留两个工作流：
+本分支不包含 `.github` 工作流，不会在该分支提供 GitHub Actions 构建定义。需要原有 IPA / TestFlight 工作流时，使用本仓库的 `main` 分支。
 
-| 文件 | 用途 |
-| --- | --- |
-| `.github/workflows/dart.yml` | 构建签名 IPA，可选择上传 App Store Connect / TestFlight |
-| `.github/workflows/testflight-upload.yml` | 上传指定构建运行产生的现有 IPA |
-
-新 GitHub 仓库需要单独设置 Actions Secrets，旧仓库的 Secrets 不会随代码迁移：
-
-| Secret | 内容 |
-| --- | --- |
-| `P12_BASE64` | 分发证书和匹配私钥组成的 P12 文件 Base64 |
-| `P12_PASSWORD` | 对应 P12 密码 |
-| `MOBILEPROVISION_BASE64` | Runner 的 App Store 描述文件 Base64 |
-| `RECORDING_MOBILEPROVISION_BASE64` | 录音 Live Activity 扩展对应的描述文件 Base64 |
-| `ASC_KEY_ID` | App Store Connect API Key ID |
-| `ASC_ISSUER_ID` | App Store Connect Issuer ID |
-| `ASC_PRIVATE_KEY` | App Store Connect P8 私钥全文 |
-
-工作流沿用现有团队、Bundle ID 和扩展签名逻辑。跨仓库沿用同一个 App 时，请填写高于已上传版本的 `build_number`，避免新仓库运行序号从头计数导致版本重复。
+iOS 本地签名构建需要 macOS、匹配的分发证书、主应用及 Live Activity 扩展描述文件和导出配置：
 
 ```bash
-gh workflow run dart.yml --repo bandu111/Agenote-app --ref main -f upload_testflight=true -f build_number=你的新构建号
+flutter build ipa --release --flavor cloud --target lib/main.dart --dart-define-from-file=config/cloud.json --build-number=你的新构建号 --export-options-plist=/path/to/ExportOptions.plist
 ```
 
-Apple 上传成功、处理成功和测试员可安装是不同状态。工作流会查询处理状态，但不会自动申请公开外部测试、邀请测试员或修改 App 商店描述。
+构建号必须高于同一 App 已上传的构建号。签名文件和凭据放在本机或 CI 密钥管理中，不提交到仓库。Apple 上传成功、处理成功和测试员可安装是不同状态。
 
 ## 仓库范围
 
